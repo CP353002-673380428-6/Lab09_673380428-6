@@ -18,7 +18,7 @@ public class DepositService {
         this.depositRepository = depositRepository;
     }
 
-    //@Transactional
+    @Transactional
     public void deposit(Long accountId, Double amount) {
         // 1. ค้นหา Account จาก accountId
         Account account = accountRepository.findById(accountId)
@@ -33,6 +33,6 @@ public class DepositService {
         depositRepository.save(transaction);
 
         // โยน Error 
-        throw new RuntimeException("Test Rollback");
+        //throw new RuntimeException("Test Rollback");
     }
 }
