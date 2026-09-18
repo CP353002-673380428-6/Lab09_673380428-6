@@ -1,194 +1,182 @@
-> นี่คือเนื้อหาไฟล์ **`Readme.md`** ภาษาไทยฉบับสมบูรณ์ ที่จัดโครงสร้างอย่างเป็นระเบียบ ครอบคลุมทั้งรายละเอียดโจทย์, การประยุกต์ใช้ SOLID Principles, โครงสร้างตาราง (1:1 และ 1:N), Strategy Pattern และคู่มือการติดตั้ง สามารถคัดลอกไปวางทับในไฟล์ `Readme.md` ของโปรเจกต์ได้เลยครับ:
+> นี่คือเนื้อหาไฟล์ **`README.md`** ภาษาไทยฉบับสมบูรณ์สำหรับ **Lab 9: Spring Boot - Transaction** ครับ จัดรูปแบบ Markdown สวยงาม ครอบคลุมตั้งแต่สถาปัตยกรรม, การตั้งค่า, API, การทดลองเปรียบเทียบ Rollback ไปจนถึงเฉลยคำถามท้ายแล็บ สามารถคัดลอกไปวางในไฟล์ `README.md` ของโปรเจกต์ได้ทันทีครับ
 
-# 🛍️ Lab 8: Table Relationships — Product Shop
+# 🏦 Lab 9: Spring Boot — Transaction Management
 
 **วิชา:** CP353002 Principles of Software Design
-**ผู้จัดทำ:** รหัสนักศึกษา `673380428-6` | กลุ่มเรียน (Section) `4`
-**เทคโนโลยีหลัก:** Java 21 / Spring Boot 3.3.0 / Spring Data JPA / PostgreSQL / Thymeleaf
+**ผู้จัดทำ:** นายสิทธิโชค (Sitthichok) | รหัสนักศึกษา: `673380428-6`
+**เทคโนโลยีหลัก:** Java 21 / Spring Boot 3.3.x / Spring Data JPA / PostgreSQL / REST API
 
 ---
 
-## 📋 1. วัตถุประสงค์ (Objectives)
+## 📋 1. วัตถุประสงค์ของ Lab
 
-1. เข้าใจและประยุกต์ใช้ความสัมพันธ์ของฐานข้อมูลแบบ **One-to-One (1:1)** และ **One-to-Many (1:N)** ผ่าน Spring Data JPA
-2. ออกแบบ Entity, Service, Controller และ Pattern ให้สอดคล้องตามหลักการ **SOLID Principles 100%**
-3. ประยุกต์ใช้ **Strategy Pattern** ร่วมกับ **Dependency Injection** ของ Spring Boot ในการคำนวณส่วนลดโดยไม่ละเมิด Open/Closed Principle (OCP)
-4. พัฒนาระบบ CRUD (Create, Read, Update, Delete) จัดการข้อมูลที่เชื่อมโยงกันข้ามตารางพร้อม Cascade Operations
+1. เข้าใจหลักการทำงานของ **Database Transaction** ตามคุณสมบัติ **ACID (โดยเฉพาะ Atomicity)**
+2. สามารถประยุกต์ใช้ Annotation `@Transactional` ใน Spring Boot เพื่อควบคุมขอบเขตของ Transaction
+3. เข้าใจและสามารถอธิบายความแตกต่างระหว่างกระบวนการ **COMMIT** และ **ROLLBACK** ได้อย่างชัดเจน
+4. พัฒนา REST API ตามสถาปัตยกรรมแบบแยกชั้น (Layered Architecture: Model, Repository, Service, Controller)
+5. สร้างความสัมพันธ์ของตารางแบบ **One-to-Many (1:N)** ในทิศทางเดียว (Unidirectional) เพื่อป้องกันปัญหา JSON Infinite Recursion
 
 ---
 
 ## 🛠️ 2. เทคโนโลยีที่ใช้ (Tech Stack)
 
 * **Language:** Java 21 (LTS)
-* **Framework:** Spring Boot 3.3.0
-  * Spring Web (MVC)
-  * Spring Data JPA (Hibernate 6.5)
-  * Thymeleaf (Template Engine)
-  * Spring Boot DevTools
+* **Framework:** Spring Boot 3.3.x
+  * **Spring Web:** พัฒนา RESTful Web Services
+  * **Spring Data JPA:** จัดการข้อมูลด้วย ORM (Hibernate) และควบคุม Transaction
 * **Database:** PostgreSQL 16
-* **Build Tool:** Apache Maven 3.9+
-* **Version Control:** Git & GitHub
+* **Build Tool:** Apache Maven (Maven Wrapper: `./mvnw`)
+* **Testing Tools:** Postman / cURL / pgAdmin 4
 
 ---
 
-## 🧠 3. สถาปัตยกรรมและหลักการออกแบบ (SOLID Principles)
+## 🗄️ 3. โครงสร้างฐานข้อมูลและความสัมพันธ์ (Database Schema)
 
-โปรเจกต์นี้ได้รับการออกแบบตามหลักการของ **SOLID Principles** ในทุกเลเยอร์:
+ระบบมีทั้งหมด 2 ตาราง โดยมีความสัมพันธ์แบบ **One-to-Many (1:N)**:
 
-| ตัวย่อ | หลักการ (Principle) | การประยุกต์ใช้ในโปรเจกต์นี้ |
-|:---:|---|---|
-| **S** | **Single Responsibility (SRP)** | • แยก Entity: `Product`, `ProductDetail` และ `Review` แยกกันคนละตารางตามหน้าที่ของข้อมูล<br>• แยก Layer: `Controller` รับส่ง HTTP เท่านั้น, `Service` จัดการ Business Logic, `Repository` จัดการ Database, `DiscountContext` รับผิดชอบเฉพาะการคำนวณส่วนลด |
-| **O** | **Open/Closed (OCP)** | • **Strategy Pattern:** ใช้ Spring Component Map Injection ใน `DiscountContext` ทำให้สามารถเพิ่มโปรโมชันส่วนลดใหม่ (เช่น `VIPDiscountStrategy`) ได้ทันทีเพียงสร้างคลาสใหม่ **โดยไม่ต้องแก้ไขโค้ดเดิมแม้แต่บรรทัดเดียว**<br>• การเพิ่มระบบ `Review` ทำได้โดยไม่ต้องแก้ไขโครงสร้างตารางหลักของ `Product` |
-| **L** | **Liskov Substitution (LSP)** | • คลาสกลยุทธ์ส่วนลดทุกตัว (`NoDiscount`, `MemberDiscount`, `SeasonalSale`) สามารถใช้แทน Interface `DiscountStrategy` ได้สมบูรณ์โดยไม่ทำให้ระบบทำงานผิดพลาด<br>• Repository ทุกตัวสืบทอดและทำงานแทน `JpaRepository` ได้อย่างสมบูรณ์ |
-| **I** | **Interface Segregation (ISP)** | • Interface `DiscountStrategy` มีเฉพาะเมธอด `applyDiscount()` ไม่ยัดเยียดเมธอดที่ไม่จำเป็น<br>• แยก Repository ชัดเจนตาม Entity (`ProductRepository`, `ProductDetailRepository`, `ReviewRepository`) ไม่รวมเป็น Interface ใหญ่ตัวเดียว |
-| **D** | **Dependency Inversion (DIP)** | • ทุก Layer พึ่งพา Abstraction (Interface): `Controller` ➔ `Service` ➔ `Repository` (Interface)<br>• ใช้ **Constructor Injection** ในการเชื่อมโยง Dependencies ทั้งหมด<br>• `DiscountContext` พึ่งพา `Map<String, DiscountStrategy>` ที่ถูกฉีดเข้ามาโดย Spring Framework แทนการใช้คำสั่ง `new` เรียก Concrete Class โดยตรง |
-
----
-
-## 🔗 4. ความสัมพันธ์ของตาราง (Table Relationships)
-
-```
-                       ┌──────────────────────┐
-                       │    ProductDetail     │
-                       │──────────────────────│
-                       │ PK  id               │
-                       │     description      │
-                       │     warranty         │
-                       │     weight           │
-                       │     dimensions       │
-                       │     manufactured_... │
-                       └──────────▲───────────┘
-                                  │ (1:1)
-                       ┌──────────┴───────────┐
-                       │       Product        │
-                       │──────────────────────│
-                       │ PK  id               │
-                       │     name             │
-                       │     category         │
-                       │     brand            │
-                       │     stock            │
-                       │     price            │
-                       │     discount_type    │
-                       │ FK  detail_id        │──┐ (Owner 1:1)
-                       └──────────┬───────────┘  │
-                                  │ (1:N)        │
-                                  ▼              │
-                       ┌──────────────────────┐  │
-                       │        Review        │  │
-                       │──────────────────────│  │
-                       │ PK  id               │  │
-                       │     reviewer         │  │
-                       │     rating           │  │
-                       │     comment          │  │
-                       │     review_date      │  │
-                       │ FK  product_id       │◀─┘ (Many side เก็บ FK)
-                       └──────────────────────┘
+```text
+       ┌────────────────────────┐
+       │        account         │
+       ├────────────────────────┤
+       │ PK  id                 │
+       │     account_number     │
+       │     owner_name         │
+       │     balance            │
+       └───────────▲────────────┘
+                   │ 1
+                   │
+                   │ *
+       ┌───────────┴────────────┐
+       │  deposit_transaction   │
+       ├────────────────────────┤
+       │ PK  id                 │
+       │     amount             │
+       │ FK  account_id         │ (Many-to-One ชี้ไปที่ Account)
+       └────────────────────────┘
 ```
 
-### 1) One-to-One (1:1): `Product` ↔ `ProductDetail`
-* **แนวคิด:** ข้อมูลเชิงลึกของสินค้า (เช่น การรับประกัน, ขนาด, น้ำหนัก) ไม่จำเป็นต้องถูก Query ตลอดเวลา จึงแยกออกมาเพื่อความเป็น SRP
-* **การตั้งค่า:** `Product` เป็นฝั่งเจ้าของความสัมพันธ์ (Owner Side) ถือ Foreign Key `detail_id` และกำหนด `cascade = CascadeType.ALL, orphanRemoval = true` เพื่อให้เมื่อลบสินค้า ข้อมูล Detail จะถูกลบตามทันที
-
-### 2) One-to-Many (1:N): `Product` (1) ↔ `Review` (N)
-* **แนวคิด:** สินค้า 1 รายการสามารถมีรีวิวได้หลายรายการ ไม่จำกัดจำนวน
-* **การตั้งค่า:** ฝั่ง Many (`Review`) เป็นผู้เก็บ Foreign Key ชื่อ `product_id` ผ่าน `@ManyToOne` และฝั่ง `Product` เชื่อมโยงผ่าน `@OneToMany(mappedBy = "product")`
+> **📌 ข้อควรระวังในการออกแบบ (Design Consideration):**
+> ความสัมพันธ์ถูกประกาศไว้ที่ฝั่ง **`DepositTransaction` เท่านั้น** (`@ManyToOne`) โดยในคลาส `Account` **ไม่มีการเก็บ `List<DepositTransaction>`** เพื่อป้องกันปัญหา **JSON Infinite Recursion** (การวนลูปไม่รู้จบขณะแปลง Object เป็น JSON ตอนส่งผ่าน REST API)
 
 ---
 
-## 🎯 5. Strategy Pattern (คำนวณส่วนลด)
+## 🧠 4. กลไกการทำงานของ `@Transactional`
 
-ระบบคำนวณส่วนลดได้รับการออกแบบให้เป็น Spring Beans เพื่อความยืดหยุ่นและถูกต้องตาม OCP 100%:
+การฝากเงิน 1 ครั้ง ประกอบไปด้วย 2 ขั้นตอนสำคัญ:
+1. **เพิ่มยอดเงินในบัญชี (Update Balance)**
+2. **บันทึกประวัติการฝากเงิน (Insert DepositTransaction)**
 
-* **`DiscountStrategy` (Interface):** นิยามเมธอด `applyDiscount(double originalPrice)`
-* **Concrete Strategies:**
-  * `NoDiscountStrategy` (`@Component("NONE")`): ไม่ลดราคา
-  * `MemberDiscountStrategy` (`@Component("MEMBER")`): ส่วนลดสมาชิก 10%
-  * `SeasonalSaleStrategy` (`@Component("SEASONAL")`): ส่วนลดเทศกาล 20%
-* **`DiscountContext` (Context Class):** รับ `Map<String, DiscountStrategy>` ผ่าน Constructor Injection และดึง Strategy มาใช้งานตาม Key โดยไม่ต้องพึ่งพา `switch-case` แบบ Hardcoded
-
----
-
-## 📂 6. โครงสร้างโปรเจกต์ (Project Structure)
-
+```text
+[เริ่ม Transaction]
+        │
+        ▼
+   ค้นหา Account
+        │
+        ▼
+   เพิ่ม balance ใน Account (save)
+        │
+        ▼
+   บันทึกประวัติ DepositTransaction (save)
+        │
+        ├───────────────────────────────┐
+        ▼ (สำเร็จทุกขั้นตอน)            ▼ (เกิด Exception กลางคัน)
+    [ COMMIT ]                     [ ROLLBACK ]
+บันทึกข้อมูลลงฐานข้อมูลถาวร     ย้อนคืนสถานะข้อมูลเดิมทั้งหมด
 ```
-Lab08_673380428-6/
-├── pom.xml
-├── README.md
-├── src/
-│   └── main/
-│       ├── java/com/example/demo/
-│       │   ├── DemoApplication.java
-│       │   ├── controller/
-│       │   │   └── ProductController.java
-│       │   ├── model/
-│       │   │   ├── Product.java
-│       │   │   ├── ProductDetail.java
-│       │   │   └── Review.java
-│       │   ├── repository/
-│       │   │   ├── ProductRepository.java
-│       │   │   ├── ProductDetailRepository.java
-│       │   │   └── ReviewRepository.java
-│       │   ├── service/
-│       │   │   └── ProductService.java
-│       │   └── strategy/
-│       │       ├── DiscountStrategy.java
-│       │       ├── DiscountContext.java
-│       │       ├── NoDiscountStrategy.java
-│       │       ├── MemberDiscountStrategy.java
-│       │       └── SeasonalSaleStrategy.java
-│       └── resources/
-│           ├── application.properties
-│           ├── static/css/
-│           │   └── style.css
-│           └── templates/products/
-│               ├── list.html
-│               ├── add.html
-│               ├── edit.html
-│               └── delete.html
+
+* **มี `@Transactional`:** ทั้งสองขั้นตอนจะนับเป็น **"งานก้อนเดียวกัน (Atomic Unit)"** หากเกิด RuntimeException ระบบจะทำการ **Rollback** ย้อนกลับข้อมูลให้ทั้งหมด ยอดเงินจะไม่เพิ่มและไม่มีประวัติค้าง
+* **ไม่มี `@Transactional`:** คำสั่ง `save()` จะแยกกันบันทึกทันทีทีละคำสั่ง (Autocommit) หากเกิด Exception ตามหลัง ยอดเงินจะเพิ่มค้างไว้แต่ไม่มีประวัติ หรือเกิดภาวะข้อมูลไม่สอดคล้องกัน (**Inconsistent State**)
+
+---
+
+## 📂 5. โครงสร้างโปรเจกต์ (Project Structure)
+
+```text
+src/main/java/com/example/lab9/
+├── Lab9Application.java
+├── model/
+│   ├── Account.java                ← Entity บัญชีธนาคาร
+│   └── DepositTransaction.java     ← Entity รายการฝากเงิน (@ManyToOne)
+├── repository/
+│   ├── AccountRepository.java      ← extends JpaRepository
+│   └── DepositRepository.java      ← extends JpaRepository
+├── service/
+│   ├── AccountService.java         ← Business Logic จัดการบัญชี
+│   └── DepositService.java         ← ควบคุม @Transactional สำหรับการฝากเงิน
+└── controller/
+    └── AccountController.java      ← REST API Endpoints (Constructor Injection)
 ```
 
 ---
 
-## 🚀 7. การติดตั้งและเริ่มต้นใช้งาน (Getting Started)
+## 🚀 6. การติดตั้งและเริ่มต้นใช้งาน (Getting Started)
 
-### ขั้นตอนที่ 1: เตรียมฐานข้อมูล PostgreSQL
-เปิดโปรแกรม **SQL Shell (psql)** หรือรันใน Terminal:
+### 1) สร้างฐานข้อมูลใน PostgreSQL
+เปิด SQL Shell (`psql`) หรือ pgAdmin แล้วรันคำสั่ง:
 ```sql
-CREATE DATABASE lab8shop;
+CREATE DATABASE lab9;
 ```
 
-### ขั้นตอนที่ 2: ตั้งค่า `application.properties`
-ตรวจสอบไฟล์ `src/main/resources/application.properties` ปรับแต่งรหัสผ่านฐานข้อมูลของคุณ:
+### 2) ตั้งค่า `application.properties`
+ตรวจสอบไฟล์ `src/main/resources/application.properties`:
 ```properties
-spring.application.name=lab8-product-shop
+spring.application.name=lab9
 
-spring.datasource.url=jdbc:postgresql://localhost:5432/lab8shop
+# PostgreSQL Configuration (แก้ password ให้ตรงกับเครื่อง)
+spring.datasource.url=jdbc:postgresql://localhost:5432/lab9
 spring.datasource.username=postgres
 spring.datasource.password=12345678
-spring.datasource.driver-class-name=org.postgresql.Driver
 
+# JPA Settings
 spring.jpa.show-sql=true
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.format_sql=true
 ```
 
-### ขั้นตอนที่ 3: คอมไพล์และสั่งรันระบบ
-เปิด Terminal ในโฟลเดอร์โปรเจกต์ แล้วรันคำสั่ง:
+### 3) สั่งรันโปรแกรม
 ```bash
-mvn clean spring-boot:run
+./mvnw spring-boot:run
 ```
 
 ---
 
-## 🌐 8. ตารางเส้นทางระบบ (URL Mappings)
+## 🌐 7. ตาราง REST API Endpoints
 
-| HTTP Method | URL | หน้าที่การทำงาน |
-|:---:|---|---|
-| **GET** | `/` หรือ `/products` | หน้ารายการสินค้าทั้งหมด พร้อมข้อมูลสรุป 1:1, 1:N และราคาสุทธิ |
-| **GET** | `/products/add` | หน้าฟอร์มเพิ่มสินค้าใหม่ (รวมกรอก ProductDetail และ Review แรก) |
-| **POST** | `/products/save` | บันทึกข้อมูลสินค้าใหม่ลงฐานข้อมูล (Cascade ข้อมูลไปยังตารางลูก) |
-| **GET** | `/products/edit/{id}` | แสดงฟอร์มแก้ไขข้อมูลสินค้าและ ProductDetail |
-| **POST** | `/products/update/{id}`| อัปเดตข้อมูลสินค้า |
-| **GET** | `/products/delete/{id}`| แสดงหน้ายืนยันการลบสินค้า |
-| **POST** | `/products/delete/{id}`| สั่งลบสินค้า (ลบ ProductDetail อัตโนมัติด้วย CascadeType.ALL) |
+| HTTP Method | URL | คำอธิบาย | ข้อมูลที่ส่ง (Request Body) |
+|:---:|---|---|---|
+| **POST** | `/accounts` | สร้างบัญชีธนาคารใหม่ | `{"accountNumber":"1234567890", "ownerName":"Sitthichok", "balance":0}` |
+| **GET** | `/accounts/{id}` | ค้นหาและดูข้อมูลบัญชี | *(ไม่ต้องระบุ)* |
+| **POST** | `/accounts/{id}/deposit` | ฝากเงินเข้าบัญชี (`@Transactional`) | `{"amount": 1000}` |
+
+---
+
+## 🧪 8. ผลการทดลองและการเปรียบเทียบ (Experiment Results)
+
+### การทดลองที่ 1: การทำงานตามปกติ (Normal Execution)
+* ทำการฝากเงินจำนวน 1,000 บาท เข้า Account ID `1`
+* **ผลลัพธ์:** ได้รับสถานะ `200 OK`
+* **การตรวจสอบ:**
+  * เรียก `GET /accounts/1` ➔ `balance` อัปเดตจาก `0.0` เป็น `1000.0`
+  * ตรวจสอบฐานข้อมูล `SELECT * FROM deposit_transaction;` ➔ มีข้อมูล 1 แถวถูกต้อง
+
+---
+
+### การทดลองที่ 2: เปรียบเทียบผลลัพธ์ Rollback เมื่อเกิด Error
+*(จำลองข้อผิดพลาดด้วยคำสั่ง `throw new RuntimeException("Test Rollback");` ที่บรรทัดสุดท้ายของเมธอด `deposit()`)*
+
+| หัวข้อการทดสอบ | แบบที่ 1: มี `@Transactional` (ข้อ 12) | แบบที่ 2: ไม่มี `@Transactional` (ข้อ 13) |
+|---|:---:|:---:|
+| **สถานะตอบกลับ (HTTP Status)** | `500 Internal Server Error` | `500 Internal Server Error` |
+| **ยอดเงินในบัญชี (`balance`)** | **`1000.0` (เท่าเดิม)** | **`2000.0` (ยอดเงินเพิ่มขึ้น)** |
+| **จำนวนแถวใน `deposit_transaction`** | **1 แถว (เท่าเดิม)** | **2 แถว (มีรายการใหม่ถูกบันทึก)** |
+| **พฤติกรรมของฐานข้อมูล** | **ROLLBACK สมบูรณ์**<br>ย้อนคืนสถานะข้อมูลเดิมทั้งหมด | **ไม่มีการ ROLLBACK (เกิด Partial Update)**<br>ข้อมูลถูกบันทึกค้างไว้แม้ระบบพัง |
+| **ความสมบูรณ์ของข้อมูล** | ✅ สอดคล้องถูกต้อง (Consistent) | ❌ เสียหายและไม่สอดคล้องกัน (Inconsistent) |
+
+---
+
+## 👤 9. ข้อมูลผู้จัดทำ
+
+* **ชื่อ-นามสกุล:** นายสิทธิโชค มุขนาค
+* **รหัสนักศึกษา:** `673380428-6`
+* **วิชา:** CP353002 หลักการออกแบบซอฟต์แวร์ (Principles of Software Design)
+* **สถาบัน:** มหาวิทยาลัยขอนแก่น (Khon Kaen University)
