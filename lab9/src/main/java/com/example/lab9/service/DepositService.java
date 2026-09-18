@@ -31,5 +31,8 @@ public class DepositService {
         // 3. สร้าง DepositTransaction ผูกกับ Account แล้วบันทึก
         DepositTransaction transaction = new DepositTransaction(amount, account);
         depositRepository.save(transaction);
+
+        // โยน Error 
+        throw new RuntimeException("Test Rollback");
     }
 }
