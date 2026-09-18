@@ -1,0 +1,39 @@
+# ── Ignore Zip Files ──
+*.zip
+lab9.zip
+
+# ── Maven Build Output ──
+target/
+**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ── IDE & Editors ──
+.vscode/
+*.code-workspace
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.settings/
+.project
+.classpath
+bin/
+
+# ── Log Files ──
+*.log
+logs/
+
+# ── OS Files ──
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
